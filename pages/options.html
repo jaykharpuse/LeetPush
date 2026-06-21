@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>LeetPush Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #1a1a1a;
+      --surface: #282828;
+      --surface-hover: #333333;
+      --accent: #FFA116;
+      --accent-hover: #e08e12;
+      --text: #eff1f6;
+      --text-secondary: #8c8c8c;
+      --success: #00b8a3;
+      --error: #ff375f;
+      --border: #383838;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 580px;
+      background-color: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 40px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--accent), #FF8A00);
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .logo-container {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 161, 22, 0.1);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+    }
+
+    .logo-container svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    h1 span {
+      color: var(--accent);
+    }
+
+    p.subtitle {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    .form-group {
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      background-color: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(255, 161, 22, 0.15);
+    }
+
+    input[type="password"] {
+      padding-right: 48px;
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 14px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+      transition: color 0.2s ease;
+    }
+
+    .toggle-password:hover {
+      color: var(--text);
+    }
+
+    .toggle-password svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
+    .switch-group {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      background-color: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+      transition: background-color 0.2s ease;
+    }
+
+    .switch-group:hover {
+      background-color: rgba(255, 255, 255, 0.04);
+    }
+
+    .switch-info {
+      flex: 1;
+      padding-right: 16px;
+    }
+
+    .switch-title {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+
+    .switch-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* Switch styling */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 24px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #424242;
+      transition: .3s;
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: var(--text);
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--accent);
+    }
+
+    input:focus + .slider {
+      box-shadow: 0 0 1px var(--accent);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(24px);
+    }
+
+    .hints {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 8px;
+      line-height: 1.5;
+      background: rgba(255, 255, 255, 0.02);
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+
+    .hints code {
+      background-color: rgba(255, 255, 255, 0.08);
+      color: var(--accent);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: monospace;
+    }
+
+    .btn-container {
+      margin-top: 32px;
+      display: flex;
+      gap: 16px;
+    }
+
+    button.btn-primary {
+      flex: 1;
+      background: linear-gradient(135deg, var(--accent), #FF8A00);
+      color: #000;
+      border: none;
+      padding: 14px 28px;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-family: inherit;
+      transition: transform 0.1s ease, box-shadow 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    button.btn-primary:hover {
+      box-shadow: 0 4px 15px rgba(255, 161, 22, 0.3);
+      transform: translateY(-1px);
+    }
+
+    button.btn-primary:active {
+      transform: translateY(1px);
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 1000;
+    }
+
+    .toast {
+      background-color: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 16px 24px;
+      border-radius: var(--radius-sm);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transform: translateY(50px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: none;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .toast.success {
+      border-left: 4px solid var(--success);
+    }
+
+    .toast.error {
+      border-left: 4px solid var(--error);
+    }
+
+    .toast-icon {
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="logo-container">
+        <!-- Logo matching icon design -->
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+          <defs>
+            <linearGradient id="grad-logo" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#FFA116;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#FF8A00;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <path d="M 64,95 L 64,45 M 64,45 L 48,61 M 64,45 L 80,61" stroke="url(#grad-logo)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <circle cx="64" cy="95" r="10" fill="#eff1f6" />
+          <circle cx="64" cy="35" r="10" fill="#00b8a3" />
+        </svg>
+      </div>
+      <div>
+        <h1>Leet<span>Push</span> Settings</h1>
+        <p class="subtitle">Configure your GitHub connection details</p>
+      </div>
+    </header>
+
+    <form id="settingsForm" onsubmit="return false;">
+      <div class="form-group">
+        <label for="githubToken">GitHub Personal Access Token (PAT)</label>
+        <div class="input-wrapper">
+          <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" required autocomplete="off">
+          <button type="button" class="toggle-password" id="togglePassword" title="Show/Hide Token">
+            <!-- Eye icon -->
+            <svg id="eyeIcon" viewBox="0 0 24 24">
+              <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group" style="display: flex; gap: 16px;">
+        <div style="flex: 1;">
+          <label for="githubUsername">GitHub Username</label>
+          <input type="text" id="githubUsername" placeholder="octocat" required>
+        </div>
+        <div style="flex: 1;">
+          <label for="githubRepo">Repository Name</label>
+          <input type="text" id="githubRepo" placeholder="leetcode-solutions" required>
+        </div>
+      </div>
+
+      <div class="form-group" style="display: flex; gap: 16px;">
+        <div style="flex: 2;">
+          <label for="repoFolder">Repository Folder Name</label>
+          <input type="text" id="repoFolder" placeholder="LeetCode" value="LeetCode">
+        </div>
+        <div style="flex: 1;">
+          <label for="githubBranch">Branch</label>
+          <input type="text" id="githubBranch" placeholder="main" value="main">
+        </div>
+      </div>
+
+      <div class="switch-group">
+        <div class="switch-info">
+          <div class="switch-title">Use Difficulty Subfolder</div>
+          <div class="switch-desc">Store solutions under Easy / Medium / Hard folders</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="useDifficultyFolder" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="switch-group">
+        <div class="switch-info">
+          <div class="switch-title">Use Language Subfolder</div>
+          <div class="switch-desc">Store solutions under Python / C++ / Java folders</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="useLanguageFolder">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label for="commitMessageFormat">Commit Message Format</label>
+        <input type="text" id="commitMessageFormat" value="Solved {problemId}. {problemName} [{difficulty}] - {language} | {time}% time, {space}% space">
+        <div class="hints">
+          Available variables:<br>
+          <code>{problemId}</code> <code>{problemName}</code> <code>{difficulty}</code> <code>{language}</code> <code>{time}</code> (runtime %) <code>{space}</code> (memory %) <code>{date}</code>
+        </div>
+      </div>
+
+      <div class="btn-container">
+        <button type="submit" class="btn-primary" id="saveButton">
+          Save Configuration
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="options.js"></script>
+</body>
+</html>

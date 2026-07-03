@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LeetSync Popup</title>
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body>
+    <main class="popup-shell">
+      <section id="auth-view" class="panel hidden">
+        <h1>LeetSync</h1>
+        <p>Connect GitHub to auto-sync your accepted solutions.</p>
+        <button id="connect-button">Connect GitHub</button>
+        <div id="device-code-box" class="device-box hidden"></div>
+      </section>
+
+      <section id="ready-view" class="panel hidden">
+        <div class="header-row">
+          <div>
+            <h1 id="user-name">LeetSync</h1>
+            <p id="repo-name">Ready</p>
+          </div>
+          <img id="avatar" class="avatar" alt="GitHub avatar" />
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card"><strong id="total-solved">0</strong><span>Total Solved</span></div>
+          <div class="stat-card"><strong id="easy-count">0</strong><span>Easy</span></div>
+          <div class="stat-card"><strong id="medium-count">0</strong><span>Medium</span></div>
+          <div class="stat-card"><strong id="hard-count">0</strong><span>Hard</span></div>
+        </div>
+        <div class="line-item"><span>Last synced</span><strong id="last-synced"></strong></div>
+        <button id="sign-out-button">Sign Out</button>
+      </section>
+    </main>
+    <script type="module" src="./popup.ts"></script>
+  </body>
+</html>

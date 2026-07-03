@@ -12,26 +12,36 @@ document.addEventListener('DOMContentLoaded', () => {
   chrome.storage.sync.get({
     githubToken: '',
     githubUsername: '',
+    githubOwner: '',
     githubRepo: ''
   }, (items) => {
     const isConfigured = items.githubToken && items.githubUsername && items.githubRepo;
 
     if (isConfigured) {
       statusDot.classList.add('connected');
-      statusText.innerText = 'Connected';
-      repoValue.innerHTML = `<a href="https://github.com/${items.githubUsername}/${items.githubRepo}" target="_blank">${items.githubUsername}/${items.githubRepo}</a>`;
+      statusText.textContent = 'Connected';
+      repoValue.replaceChildren();
+
+      const repoLink = document.createElement('a');
+      const repoOwner = items.githubOwner || items.githubUsername;
+      repoLink.href = `https://github.com/${encodeURIComponent(repoOwner)}/${encodeURIComponent(items.githubRepo)}`;
+      repoLink.target = '_blank';
+      repoLink.rel = 'noopener noreferrer';
+      repoLink.textContent = `${repoOwner}/${items.githubRepo}`;
+      repoValue.appendChild(repoLink);
     } else {
       statusDot.classList.remove('connected');
-      statusText.innerText = 'Disconnected';
-      repoValue.innerHTML = `<a href="#" id="configureLink">Not configured (click to setup)</a>`;
-      
-      const configLink = document.getElementById('configureLink');
-      if (configLink) {
-        configLink.addEventListener('click', (e) => {
-          e.preventDefault();
-          chrome.runtime.openOptionsPage();
-        });
-      }
+      statusText.textContent = 'Disconnected';
+      repoValue.replaceChildren();
+
+      const configLink = document.createElement('a');
+      configLink.href = '#';
+      configLink.textContent = 'Not configured (click to setup)';
+      configLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        chrome.runtime.openOptionsPage();
+      });
+      repoValue.appendChild(configLink);
     }
   });
 
@@ -42,8 +52,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }, (items) => {
     if (items.lastPushProblemName && items.lastPushTimestamp) {
       lastPushSection.style.display = 'flex';
-      lastPushName.innerText = items.lastPushProblemName;
-      lastPushTime.innerText = formatRelativeTime(items.lastPushTimestamp);
+      lastPushName.textContent = items.lastPushProblemName;
+      lastPushTime.textContent = formatRelativeTime(items.lastPushTimestamp);
     } else {
       lastPushSection.style.display = 'none';
     }

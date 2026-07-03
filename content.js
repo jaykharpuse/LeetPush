@@ -30,64 +30,81 @@ const LANG_MAP = {
 };
 
 let isProcessing = false;
+let lastKnownSubmissionId = null;
+let observedResultContainer = null;
 
-// 1. Setup MutationObserver to watch for submission results
+// Watch only the active submission result UI for a newly-rendered Accepted state.
 const observer = new MutationObserver((mutations) => {
   if (isProcessing) return;
 
-  for (const mutation of mutations) {
-    if (mutation.type === 'childList') {
-      if (detectAcceptedInDOM()) {
-        triggerPushSequence();
-        break;
-      }
-    }
+  if (mutations.some(mutationContainsAcceptedResult)) {
+    triggerPushSequence();
   }
 });
 
-// Start observing
-observer.observe(document.body, {
-  childList: true,
-  subtree: true
-});
+initializeAcceptedDetection();
 
-console.log("LeetPush content script loaded and observing submissions.");
+async function initializeAcceptedDetection() {
+  const slug = getProblemSlug();
+  const storedSubmissionId = await getLastSubmissionId();
+  lastKnownSubmissionId = storedSubmissionId;
 
-// Helper to check if "Accepted" exists in the relevant UI elements
-function detectAcceptedInDOM() {
-  const elements = document.querySelectorAll('span, div, p, h3, a');
-  for (const el of elements) {
-    if (el.textContent && el.textContent.trim() === 'Accepted') {
-      // Check if it has classes indicating success, or standard LeetCode data attrs
-      const hasSuccessClass = el.className && (
-        el.className.includes('success') || 
-        el.className.includes('accepted') ||
-        el.className.includes('text-green') ||
-        el.className.includes('text-sd-green')
-      );
-      const hasDataE2e = el.getAttribute('data-e2e-locator') === 'submission-result' || 
-                        el.closest('[data-e2e-locator="submission-result"]');
-      const parentMatches = el.closest('.result-container') || 
-                            el.closest('.status-column') || 
-                            el.closest('[class*="status"]') || 
-                            el.closest('[class*="result"]');
-
-      if (hasSuccessClass || hasDataE2e || parentMatches) {
-        return true;
-      }
-      
-      // Fallback check by color
-      try {
-        const computedStyle = window.getComputedStyle(el);
-        const color = computedStyle.color;
-        // Check green colors typical to LeetCode success
-        if (color.includes('45') || color.includes('181') || color.includes('163') || color.includes('0, 184') || color.includes('rgb(0, 175')) {
-          return true;
-        }
-      } catch (e) {}
-    }
+  if (slug) {
+    const currentSubmission = await fetchRecentAcceptedSubmission(slug, 1);
+    if (currentSubmission) lastKnownSubmissionId = Number(currentSubmission.id);
   }
-  return false;
+
+  attachToSubmissionResultContainer();
+  setInterval(attachToSubmissionResultContainer, 1000);
+  console.log("LeetPush content script loaded and observing the submission result container.");
+}
+
+function attachToSubmissionResultContainer() {
+  const container = findSubmissionResultContainer();
+  if (!container || container === observedResultContainer) return;
+
+  observer.disconnect();
+  observedResultContainer = container;
+  observer.observe(container, {
+    childList: true,
+    characterData: true,
+    subtree: true
+  });
+
+  // If LeetCode replaced the whole result container between polling ticks,
+  // verify its current state; the submission-ID guard still rejects stale UI.
+  if (!isProcessing && nodeContainsAcceptedText(container)) {
+    triggerPushSequence();
+  }
+}
+
+function findSubmissionResultContainer() {
+  return document.querySelector([
+    '[data-e2e-locator="submission-result"]',
+    '[data-e2e-locator="submission-result-container"]',
+    '[data-e2e-locator="submission-result-pane"]',
+    '[class*="submission-result"]',
+    '[class*="result-container"]'
+  ].join(','));
+}
+
+function mutationContainsAcceptedResult(mutation) {
+  const changedNodes = mutation.type === 'characterData'
+    ? [mutation.target.parentElement]
+    : [...mutation.addedNodes];
+
+  return changedNodes.some(node => node && nodeContainsAcceptedText(node));
+}
+
+function nodeContainsAcceptedText(node) {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return node.textContent.trim() === 'Accepted';
+  }
+  if (node.nodeType !== Node.ELEMENT_NODE) return false;
+  if (node.textContent.trim() === 'Accepted') return true;
+
+  return [...node.querySelectorAll('span, div, p, h3')]
+    .some(element => element.textContent.trim() === 'Accepted');
 }
 
 // Sequence triggered upon detecting an Accepted status
@@ -110,13 +127,15 @@ function triggerPushSequence() {
         throw new Error("Could not find any recent Accepted submissions for this problem.");
       }
 
-      // Check if this submission was already pushed to prevent duplicates
-      const isDuplicate = await checkIsDuplicateSubmission(submission.id);
-      if (isDuplicate) {
-        console.log(`LeetPush: Submission ${submission.id} has already been pushed. Skipping.`);
+      // Reject stale or already-pushed IDs before fetching details or sending a push.
+      const submissionId = Number(submission.id);
+      const storedSubmissionId = await getLastSubmissionId();
+      if (submissionId === Number(lastKnownSubmissionId) || submissionId === storedSubmissionId) {
+        console.log(`LeetPush: Submission ${submission.id} is not new. Skipping.`);
         isProcessing = false;
         return;
       }
+      lastKnownSubmissionId = submissionId;
 
       // 2. Fetch GraphQL problem details
       const problemDetails = await fetchProblemDetails(slug);
@@ -279,11 +298,11 @@ async function fetchSubmissionDetailsFallback(submissionId) {
   };
 }
 
-// Local storage check to prevent pushing duplicate submissions
-async function checkIsDuplicateSubmission(submissionId) {
+// Read the persisted ID before any collection or push work begins.
+async function getLastSubmissionId() {
   return new Promise((resolve) => {
     chrome.storage.local.get({ lastSubmissionId: 0 }, (items) => {
-      resolve(Number(items.lastSubmissionId) === Number(submissionId));
+      resolve(Number(items.lastSubmissionId));
     });
   });
 }

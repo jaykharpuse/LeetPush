@@ -1,42 +1,46 @@
 {
   "manifest_version": 3,
-  "name": "LeetPush",
+  "name": "LeetSync",
   "version": "1.0.0",
-  "description": "Automatically pushes LeetCode accepted solutions to GitHub in a single commit.",
+  "description": "Auto-sync your LeetCode accepted solutions to GitHub with one click",
   "permissions": [
     "storage",
     "identity",
     "tabs",
     "scripting",
-    "notifications"
+    "alarms"
   ],
   "host_permissions": [
     "https://leetcode.com/*",
-    "https://api.github.com/*"
+    "https://leetcode.cn/*",
+    "https://api.github.com/*",
+    "https://github.com/*"
   ],
   "background": {
-    "service_worker": "background.js",
+    "service_worker": "dist/background.js",
     "type": "module"
   },
   "content_scripts": [
     {
-      "matches": ["https://leetcode.com/problems/*"],
-      "js": ["content.js"],
+      "matches": ["https://leetcode.com/*", "https://leetcode.cn/*"],
+      "js": ["dist/content.js"],
       "run_at": "document_idle"
     }
   ],
   "action": {
-    "default_popup": "pages/popup.html",
+    "default_popup": "dist/popup.html",
     "default_icon": {
       "16": "icons/icon16.svg",
       "48": "icons/icon48.svg",
       "128": "icons/icon128.svg"
     }
   },
-  "options_page": "pages/options.html",
   "icons": {
     "16": "icons/icon16.svg",
     "48": "icons/icon48.svg",
     "128": "icons/icon128.svg"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
   }
 }

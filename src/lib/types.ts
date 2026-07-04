@@ -26,6 +26,7 @@ export interface RepoConfig {
   owner: string;
   name: string;
   url?: string;
+  defaultBranch?: string;
 }
 
 export interface UserSettings {
@@ -55,6 +56,8 @@ export interface StorageData {
   lastSynced?: LastSyncedInfo;
   settings?: UserSettings;
   pendingAuth?: DeviceFlowState;
+  githubClientId?: string;
+  manualAccessToken?: string;
 }
 
 export interface DeviceFlowState {

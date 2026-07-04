@@ -12,6 +12,14 @@
         <h1>LeetSync</h1>
         <p>Connect GitHub to auto-sync your accepted solutions.</p>
         <button id="connect-button">Connect GitHub</button>
+        <div class="config-box">
+          <label for="client-id-input">GitHub OAuth Client ID</label>
+          <input id="client-id-input" type="text" placeholder="Paste your OAuth app client ID" />
+          <button id="save-client-id-button" class="secondary">Save Client ID</button>
+          <label for="token-input">Personal access token (optional)</label>
+          <input id="token-input" type="password" placeholder="Paste a GitHub token" />
+          <button id="save-token-button" class="secondary">Save Token</button>
+        </div>
         <div id="device-code-box" class="device-box hidden"></div>
       </section>
 

@@ -25,7 +25,7 @@ export async function setPendingAuth(state: DeviceFlowState): Promise<void> {
 }
 
 export async function clearAuthData(): Promise<void> {
-  await chrome.storage.local.remove(['accessToken', 'githubUser', 'repo', 'stats', 'lastSynced', 'pendingAuth']);
+  await chrome.storage.local.remove(['accessToken', 'githubUser', 'repo', 'stats', 'lastSynced', 'pendingAuth', 'manualAccessToken']);
 }
 
 export async function getAccessToken(): Promise<string | undefined> {

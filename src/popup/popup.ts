@@ -1,9 +1,13 @@
-import type { PopupState, StorageData } from '../lib/types';
+import type { PopupState } from '../lib/types';
 
 const authView = document.getElementById('auth-view') as HTMLElement | null;
 const readyView = document.getElementById('ready-view') as HTMLElement | null;
 const connectButton = document.getElementById('connect-button') as HTMLButtonElement | null;
 const deviceCodeBox = document.getElementById('device-code-box') as HTMLDivElement | null;
+const clientIdInput = document.getElementById('client-id-input') as HTMLInputElement | null;
+const saveClientIdButton = document.getElementById('save-client-id-button') as HTMLButtonElement | null;
+const tokenInput = document.getElementById('token-input') as HTMLInputElement | null;
+const saveTokenButton = document.getElementById('save-token-button') as HTMLButtonElement | null;
 const userName = document.getElementById('user-name') as HTMLElement | null;
 const repoName = document.getElementById('repo-name') as HTMLElement | null;
 const avatar = document.getElementById('avatar') as HTMLImageElement | null;
@@ -22,6 +26,10 @@ async function loadState(): Promise<void> {
 function render(state: PopupState): void {
   if (!authView || !readyView) {
     return;
+  }
+
+  if (clientIdInput) {
+    clientIdInput.value = (state as PopupState & { githubClientId?: string }).githubClientId || '';
   }
 
   if (state.authenticated) {
@@ -78,6 +86,26 @@ connectButton?.addEventListener('click', async () => {
     connectButton.disabled = false;
     connectButton.textContent = 'Connect GitHub';
   }
+});
+
+saveClientIdButton?.addEventListener('click', async () => {
+  if (!clientIdInput) {
+    return;
+  }
+  await chrome.storage.local.set({ githubClientId: clientIdInput.value.trim() });
+  await loadState();
+});
+
+saveTokenButton?.addEventListener('click', async () => {
+  if (!tokenInput) {
+    return;
+  }
+  const token = tokenInput.value.trim();
+  if (!token) {
+    return;
+  }
+  await chrome.storage.local.set({ manualAccessToken: token, accessToken: token, pendingAuth: undefined });
+  await loadState();
 });
 
 signOutButton?.addEventListener('click', async () => {

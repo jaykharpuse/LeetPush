@@ -101,16 +101,20 @@ async function handleSubmission(payload: unknown): Promise<{ success: boolean; e
 
 async function startDeviceFlow(): Promise<{ success: true; state: DeviceFlowState } | { success: false; error: string }> {
   try {
-    const response = await fetch('https://github.com/login/device/code', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json'
-      },
-      body: JSON.stringify({
-        client_id: GITHUB_CLIENT_ID,
-        scope: 'repo'
-      })
+    const storage = await loadStorage();
+    const clientId = storage.githubClientId || GITHUB_CLIENT_ID;
+    if (storage.manualAccessToken) {
+      await saveLocalStorage({ accessToken: storage.manualAccessToken, pendingAuth: undefined });
+      return { success: true, state: { deviceCode: '', userCode: '', verificationUri: 'https://github.com', interval: 5, expiresIn: 0, createdAt: Date.now() } };
+    }
+
+    if (!clientId) {
+      return { success: false, error: 'Please save a GitHub OAuth client ID in the popup first.' };
+    }
+
+    const response = await postForm('https://github.com/login/device/code', {
+      client_id: clientId,
+      scope: 'repo'
     });
 
     if (!response.ok) {
@@ -143,17 +147,12 @@ async function pollDeviceFlow(): Promise<{ success: true; accessToken?: string }
   }
 
   try {
-    const response = await fetch('https://github.com/login/oauth/access_token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json'
-      },
-      body: JSON.stringify({
-        client_id: GITHUB_CLIENT_ID,
-        device_code: pendingAuth.deviceCode,
-        grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
-      })
+    const storage = await loadStorage();
+    const clientId = storage.githubClientId || GITHUB_CLIENT_ID;
+    const response = await postForm('https://github.com/login/oauth/access_token', {
+      client_id: clientId,
+      device_code: pendingAuth.deviceCode,
+      grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
     });
 
     const payload = (await response.json()) as { access_token?: string; error?: string; error_description?: string };
@@ -200,4 +199,15 @@ async function updateBadge(text: string): Promise<void> {
   window.setTimeout(() => {
     void chrome.action.setBadgeText({ text: '' });
   }, 5000);
+}
+
+async function postForm(url: string, params: Record<string, string>): Promise<Response> {
+  return fetch(url, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+    },
+    body: new URLSearchParams(params).toString()
+  });
 }

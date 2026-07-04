@@ -1,5 +1,5 @@
 import { buildCommitMessage, renderReadmeContent } from './readme-generator';
-import { getAccessToken, loadStorage, saveLocalStorage } from './storage';
+import { loadStorage, saveLocalStorage } from './storage';
 import type { GithubUserInfo, RepoConfig, SubmissionData, UserSettings } from './types';
 
 interface GitHubApiError extends Error {
@@ -59,27 +59,36 @@ export async function ensureRepository(token: string, repoName: string): Promise
   const owner = user.login;
 
   try {
-    const repo = await githubJson<{ name: string; html_url: string }>('/repos/' + encodeURIComponent(owner) + '/' + encodeURIComponent(repoName), token);
-    return { owner, name: repo.name, url: repo.html_url };
+    const repo = await githubJson<{ name: string; html_url: string; default_branch?: string }>('/repos/' + encodeURIComponent(owner) + '/' + encodeURIComponent(repoName), token);
+    return { owner, name: repo.name, url: repo.html_url, defaultBranch: repo.default_branch || 'main' };
   } catch (error) {
     const apiError = error as GitHubApiError;
-    if (apiError.status !== 404) {
+    if (apiError.status !== 404 && apiError.status !== 422) {
       throw error;
     }
 
-    const createdRepo = await githubJson<{ name: string; html_url: string }>('/user/repos', token, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        name: repoName,
-        private: true,
-        description: 'My LeetCode solutions synced by LeetSync'
-      })
-    });
+    try {
+      const createdRepo = await githubJson<{ name: string; html_url: string; default_branch?: string }>('/user/repos', token, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: repoName,
+          private: true,
+          description: 'My LeetCode solutions synced by LeetSync'
+        })
+      });
 
-    return { owner, name: createdRepo.name, url: createdRepo.html_url };
+      return { owner, name: createdRepo.name, url: createdRepo.html_url, defaultBranch: createdRepo.default_branch || 'main' };
+    } catch (createError) {
+      const nestedError = createError as GitHubApiError;
+      if (nestedError.status === 422) {
+        const repo = await githubJson<{ name: string; html_url: string; default_branch?: string }>('/repos/' + encodeURIComponent(owner) + '/' + encodeURIComponent(repoName), token);
+        return { owner, name: repo.name, url: repo.html_url, defaultBranch: repo.default_branch || 'main' };
+      }
+      throw createError;
+    }
   }
 }
 
@@ -93,7 +102,7 @@ export async function pushSubmissionToGitHub(submission: SubmissionData, setting
   const repo = data.repo ?? await ensureRepository(token, 'leetcode-solutions');
   await saveLocalStorage({ repo });
 
-  const branch = 'main';
+  const branch = repo.defaultBranch || 'main';
   const repoFolder = 'leetcode-solutions';
   const extension = submission.langExtension || 'txt';
   const questionSlug = `${submission.questionId}-${submission.titleSlug}`;

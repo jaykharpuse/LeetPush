@@ -21,7 +21,7 @@ npm install
 npm run build
 ```
 
-Open `chrome://extensions`, enable Developer mode, choose **Load unpacked**, then select this project directory. Chrome reads `manifest.json`, which loads only the generated `dist/` scripts.
+Open `chrome://extensions`, enable Developer mode, choose **Load unpacked**, then select the generated `dist/` directory.
 
 ## Connect GitHub
 

@@ -3,13 +3,7 @@
   "name": "LeetSync",
   "version": "1.0.0",
   "description": "Auto-sync your LeetCode accepted solutions to GitHub with one click",
-  "permissions": [
-    "storage",
-    "identity",
-    "tabs",
-    "scripting",
-    "alarms"
-  ],
+  "permissions": ["storage", "identity", "tabs", "scripting", "alarms"],
   "host_permissions": [
     "https://leetcode.com/*",
     "https://leetcode.cn/*",
@@ -17,18 +11,18 @@
     "https://github.com/*"
   ],
   "background": {
-    "service_worker": "dist/background.js",
+    "service_worker": "background.js",
     "type": "module"
   },
   "content_scripts": [
     {
       "matches": ["https://leetcode.com/*", "https://leetcode.cn/*"],
-      "js": ["dist/content.js"],
+      "js": ["content.js"],
       "run_at": "document_idle"
     }
   ],
   "action": {
-    "default_popup": "dist/src/popup/popup.html",
+    "default_popup": "src/popup/popup.html",
     "default_icon": {
       "16": "icons/icon16.svg",
       "48": "icons/icon48.svg",

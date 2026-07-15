@@ -19,7 +19,7 @@ const DEFAULT_SETTINGS: UserSettings = {
 
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
-    void chrome.tabs.create({ url: chrome.runtime.getURL('dist/src/popup/popup.html') });
+    void chrome.tabs.create({ url: chrome.runtime.getURL('src/popup/popup.html') });
   }
 });
 

@@ -1,122 +1,53 @@
-# 🚀 LeetPush
+# LeetSync
 
-LeetPush is a high-performance, dark-themed Chrome Extension that automatically pushes your accepted LeetCode solutions to a GitHub repository in **a single commit** (unlike other tools that create separate commits for the code and the description README).
+LeetSync is a Manifest V3 Chrome extension that watches LeetCode problem pages for an accepted submission and syncs it to a GitHub repository.
 
----
+## What it does
 
-## ✨ Key Features
+- Collects the most recent accepted submission from LeetCode and fetches question details through LeetCode GraphQL.
+- Creates a solution file and a per-problem `README.md` in one GitHub Git Tree commit.
+- Maintains `STATS.md` with total, difficulty, language, and per-problem statistics.
+- Maintains `TOPICS.md`, grouping solved problems by their LeetCode topic tags.
+- Avoids duplicate commits: identical code is skipped; an existing problem is updated only when the language differs or runtime/memory is better.
+- Creates a private `leetcode-solutions` repository when none has been configured, including the first branch commit for an empty repository.
+- Retries transient network failures and GitHub rate-limit responses. A failed non-auth submission is retained locally and can be retried from the popup.
 
-- **⚡ Single Commit Pushes**: Combines the solution file and its metadata `README.md` into **one atomic commit** using GitHub's low-level Git Tree API.
-- **👁️ Silent & Automatic**: Listens for successful submissions on LeetCode problem pages and triggers pushes in the background.
-- **🎨 Modern Dark Theme**: Features a sleek, responsive UI matching LeetCode's modern layout (designed with curated CSS tokens, micro-animations, and password toggles).
-- **📂 Customizable Folder Structure**: Organize your repository layout using synced settings:
-  - **Difficulty Subfolders** (`LeetCode/Easy/1-two-sum/...`)
-  - **Language Subfolders** (`LeetCode/Python3/Easy/1-two-sum/...`)
-  - **Flat layout** (`LeetCode/1-two-sum/...`)
-- **✏️ Dynamic Commit Messages**: Fully customizable commit message templates with dynamic placeholders.
-- **🛡️ Duplicate Prevention**: Tracks recent submission IDs in local storage to prevent redundant API commits.
-- **🔐 GitHub OAuth Onboarding**: Connects through GitHub's backend-less Device Flow, discovers your account automatically, and lets you select or create a repository.
-- **🧩 Zero Dependencies**: Pure Javascript execution utilizing Chrome's native APIs and DOM parsers.
+The extension has no runtime UI framework or third-party runtime dependencies: it uses TypeScript, Vite 5, Chrome APIs, GitHub REST/Git Database APIs, and LeetCode GraphQL.
 
----
+## Build and load
 
-## 🛠️ Folder Structure
-
-```text
-leetpush/
-├── manifest.json         # Extension configuration (Manifest V3)
-├── content.js            # Content script; monitors submissions & extracts problem details
-├── background.js         # Service worker; processes Git Tree transactions & notifications
-├── welcome.html          # First-install onboarding wizard
-├── .gitignore            # Excludes editor files, local credentials, and OS metadata
-├── icons/                # Extension badges
-│   ├── icon16.svg
-│   ├── icon48.svg
-│   └── icon128.svg
-└── pages/                # Configuration and popup interfaces
-    ├── options.html      # Full-page settings panel (Dark Mode)
-    ├── options.js        # Form validation, synced storage, and GitHub connection check
-    ├── github.js         # Shared OAuth Device Flow and repository helpers
-    ├── welcome.js        # Onboarding wizard controller
-    ├── popup.html        # Compact toolbar popup
-    └── popup.js          # Connected status manager and relative time formatter
+```bash
+npm install
+npm run build
 ```
 
----
+Open `chrome://extensions`, enable Developer mode, choose **Load unpacked**, then select this project directory. Chrome reads `manifest.json`, which loads only the generated `dist/` scripts.
 
-## ⚙️ How the "Single Commit" Logic Works
+## Connect GitHub
 
-Standard extensions use the high-level `PUT /repos/{owner}/{repo}/contents/{path}` API. However, doing this for two files (the code file and `README.md`) forces GitHub to create **two sequential commits**.
+Open the extension popup and use one of these methods:
 
-LeetPush solves this with one atomic Git Database transaction:
+1. **OAuth Device Flow:** enter your GitHub OAuth App Client ID, save it, select **Connect GitHub**, open the shown verification URL, and enter the device code. The OAuth app needs the `repo` scope and Device Flow enabled.
+2. **Personal access token:** paste a token with repository access into the optional token field and select **Save Token**. The token is validated against GitHub before it is stored.
 
-1. **Get Branch Head Reference**: Fetch the latest commit SHA of your target branch (`GET /git/ref/heads/{branch}`).
-2. **Fetch Commit Tree**: Grab the base tree SHA linked to that latest commit (`GET /git/commits/{commit_sha}`).
-3. **Read Root Tracking Files**: Read the existing root `STATS.md` and topic-index `README.md`, or start them from scratch.
-4. **Write Four Blobs**: Upload the solution, per-problem README, updated stats, and updated topic index (`POST /git/blobs`).
-5. **Create Unified Tree**: Put all four blob SHAs into one tree while retaining the parent tree (`POST /git/trees`).
-6. **Construct One Commit**: Create one commit pointing to that unified tree (`POST /git/commits`).
-7. **Advance HEAD Once**: Update the branch reference to the new commit (`PATCH /git/refs/heads/{branch}`).
+Tokens and configuration remain in Chrome extension storage; LeetSync does not use an intermediary server.
 
----
+On first sync, LeetSync uses or creates the private `leetcode-solutions` repository under the authenticated account. The popup shows the local synchronized totals and most recently synced problem.
 
-## 🚀 Installation & Setup
+## Commit templates and folders
 
-### One-time GitHub OAuth App setup
+The default commit template is `Time: {runtime} ms ({runtimePercentile}%), Space: {memory} MB ({memoryPercentile}%) - LeetSync`.
+Supported placeholders include `{questionId}`, `{questionTitle}`, `{difficulty}`, `{lang}`, `{language}`, `{runtime}`, `{runtimePercentile}`, `{memory}`, `{memoryPercentile}`, `{time}`, `{space}`, and `{date}`.
 
-GitHub's normal web OAuth code exchange requires a Client Secret, which must never be bundled in a Chrome extension. LeetPush therefore uses GitHub's backend-less **Device Flow**: the extension ships only a Client ID and polls GitHub directly for the token. No proxy or hosted backend is required.
+The sync code supports language and/or difficulty folders below `leetcode-solutions/<problem-id>-<slug>/` when those stored settings are enabled. The current popup does not yet expose a settings editor, so its default layout is flat.
 
-The GitHub verification page does not redirect to the extension in Device Flow. After approving access, close the GitHub authorization window; LeetPush's polling completes the connection automatically.
+## Manual test checklist
 
-1. Load the unpacked extension once, copy its ID from `chrome://extensions`, and form this callback URL:
-   `https://<YOUR_EXTENSION_ID>.chromiumapp.org/github`
-2. Open GitHub → **Settings** → **Developer settings** → **OAuth Apps** → **New OAuth App**.
-3. Use these values:
-   - **Application name:** `LeetPush`
-   - **Homepage URL:** your LeetPush project page (or `https://leetcode.com` for local development)
-   - **Authorization callback URL:** the exact `https://<YOUR_EXTENSION_ID>.chromiumapp.org/github` URL from step 1
-4. Create the app and enable **Device Flow** in the OAuth App settings.
-5. Copy the displayed **Client ID** into `LEETPUSH_GITHUB_CLIENT_ID` at the top of `pages/github.js`.
-6. GitHub may offer a **Client Secret**. Leave it stored only in GitHub; LeetPush does not need or embed it. If you replace Device Flow with the standard web authorization-code flow later, exchange the code on a trusted backend that holds this secret.
-
-For a published extension, keep a stable extension ID and register its final callback URL before distribution.
-
-### Load the Extension in Google Chrome
-1. Clone or download this project folder to your local machine.
-2. Open Chrome and navigate to `chrome://extensions/`.
-3. Enable **Developer mode** using the toggle switch in the top-right corner.
-4. Click the **Load unpacked** button in the top-left corner.
-5. Select the `LeetPush` folder directory.
-
-### Configure LeetPush
-1. On first install, the welcome wizard opens automatically.
-2. Choose **Connect with GitHub**, approve the `repo` scope, then select an existing repository or create a private `leetcode-solutions` repository.
-3. New or empty repositories are initialized automatically, so the first Git Tree commit has a valid branch.
-4. Use **Open Settings** later to change repository, folder, or commit-message preferences.
-5. A PAT remains available only as a fallback under **Advanced / Use a Personal Access Token instead**.
-
----
-
-## 📝 Commit Message Placeholders
-
-You can customize your commit message template in the settings page. The following variables will be dynamically populated upon submission:
-
-| Variable | Description | Example Output |
-| :--- | :--- | :--- |
-| `{problemId}` | LeetCode problem ID | `1` |
-| `{problemName}` | Problem Title | `Two Sum` |
-| `{difficulty}` | Difficulty Level | `Easy` |
-| `{language}` | Code Language (Formatted) | `Python3` |
-| `{time}` | Runtime speed percentile | `94.2` |
-| `{space}` | Memory consumption percentile | `81.5` |
-| `{date}` | UTC Date of submission | `2026-06-21` |
-
-*Default Format:*
-`Solved {problemId}. {problemName} [{difficulty}] - {language} | {time}% time, {space}% space`
-
----
-
-## 🔒 Security & Privacy
-
-- **Extension Storage Only**: Your OAuth token or fallback PAT is stored in `chrome.storage.sync`; no LeetPush server receives it.
-- **Direct API Calls**: The extension makes direct API calls to `api.github.com` and `leetcode.com`. No intermediate server receives or logs your tokens or code.
+- [ ] Run `npm run build` and load the unpacked project in `chrome://extensions`.
+- [ ] Connect with GitHub OAuth Device Flow and confirm the popup shows the account.
+- [ ] Sign out, connect using a valid PAT, and confirm invalid tokens show an error.
+- [ ] Submit an accepted solution into an empty target repository; confirm code, problem README, `STATS.md`, and `TOPICS.md` arrive in one commit.
+- [ ] Submit a different problem into the initialized repository and confirm all stats totals update.
+- [ ] Submit the same code again and confirm no GitHub commit is created; submit a measurably better or different-language solution and confirm an `Update:` commit is created.
+- [ ] Confirm popup counts and Last synced match the generated `STATS.md` after successful sync.
+- [ ] Sign out and confirm a later sync asks for GitHub authentication.

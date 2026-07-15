@@ -1,4 +1,4 @@
-import { pushSubmissionToGitHub } from '../lib/github';
+import { getGitHubUser, pushSubmissionToGitHub } from '../lib/github';
 import { fetchQuestionDetails, normalizeSubmissionPayload } from '../lib/leetcode-api';
 import { clearAuthData, loadStorage, saveLocalStorage, setPendingAuth } from '../lib/storage';
 import type { DeviceFlowState, StorageData, SubmissionData, UserSettings } from '../lib/types';
@@ -19,7 +19,7 @@ const DEFAULT_SETTINGS: UserSettings = {
 
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
-    void chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
+    void chrome.tabs.create({ url: chrome.runtime.getURL('dist/src/popup/popup.html') });
   }
 });
 
@@ -37,6 +37,22 @@ chrome.runtime.onMessage.addListener((message: MessageEnvelope, _sender, sendRes
       return;
     }
 
+    if (message.type === 'SAVE_MANUAL_TOKEN') {
+      const token = typeof message.payload === 'string' ? message.payload.trim() : '';
+      if (!token) {
+        sendResponse({ success: false, error: 'A GitHub token is required.' });
+        return;
+      }
+      try {
+        const githubUser = await getGitHubUser(token);
+        await saveLocalStorage({ manualAccessToken: token, accessToken: token, githubUser, pendingAuth: undefined });
+        sendResponse({ success: true });
+      } catch (error) {
+        sendResponse({ success: false, error: error instanceof Error ? error.message : 'GitHub token validation failed.' });
+      }
+      return;
+    }
+
     if (message.type === 'POLL_DEVICE_FLOW') {
       const result = await pollDeviceFlow();
       sendResponse(result);
@@ -46,6 +62,15 @@ chrome.runtime.onMessage.addListener((message: MessageEnvelope, _sender, sendRes
     if (message.type === 'SIGN_OUT') {
       await clearAuthData();
       sendResponse({ success: true });
+      return;
+    }
+
+    if (message.type === 'RETRY_PENDING_SYNC') {
+      const storage = await loadStorage();
+      const result = storage.pendingSubmission
+        ? await handleSubmission(storage.pendingSubmission)
+        : { success: false, error: 'No pending submission to retry.' };
+      sendResponse(result);
       return;
     }
 
@@ -85,15 +110,24 @@ async function handleSubmission(payload: unknown): Promise<{ success: boolean; e
     };
 
     const result = await pushSubmissionToGitHub(submissionData, settings);
+    if (result.status === 'skipped') {
+      console.info(`LeetSync: skipped ${submissionData.questionTitle}: ${result.reason}`);
+      return { success: true, data: submissionData };
+    }
     await saveLocalStorage({
-      stats: mergeStats(storage.stats, submissionData),
-      lastSynced: { title: submissionData.questionTitle, timestamp: new Date().toISOString(), slug: submissionData.titleSlug }
+      stats: result.stats,
+      lastSynced: { title: submissionData.questionTitle, timestamp: new Date().toISOString(), slug: submissionData.titleSlug },
+      pendingSubmission: undefined
     });
 
     await updateBadge('✓');
     return { success: true, data: submissionData };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
+    if (!/authentication|token|unauthorized/i.test(message)) {
+      const parsed = normalizeSubmissionPayload(payload);
+      if (parsed) await saveLocalStorage({ pendingSubmission: parsed });
+    }
     await updateBadge('✗');
     return { success: false, error: message };
   }
@@ -104,7 +138,8 @@ async function startDeviceFlow(): Promise<{ success: true; state: DeviceFlowStat
     const storage = await loadStorage();
     const clientId = storage.githubClientId || GITHUB_CLIENT_ID;
     if (storage.manualAccessToken) {
-      await saveLocalStorage({ accessToken: storage.manualAccessToken, pendingAuth: undefined });
+      const githubUser = await getGitHubUser(storage.manualAccessToken);
+      await saveLocalStorage({ accessToken: storage.manualAccessToken, githubUser, pendingAuth: undefined });
       return { success: true, state: { deviceCode: '', userCode: '', verificationUri: 'https://github.com', interval: 5, expiresIn: 0, createdAt: Date.now() } };
     }
 
@@ -157,7 +192,8 @@ async function pollDeviceFlow(): Promise<{ success: true; accessToken?: string }
 
     const payload = (await response.json()) as { access_token?: string; error?: string; error_description?: string };
     if (payload.access_token) {
-      await saveLocalStorage({ accessToken: payload.access_token, pendingAuth: undefined });
+      const githubUser = await getGitHubUser(payload.access_token);
+      await saveLocalStorage({ accessToken: payload.access_token, githubUser, pendingAuth: undefined });
       return { success: true, accessToken: payload.access_token };
     }
 
@@ -181,17 +217,6 @@ async function buildPopupState(): Promise<StorageData & { authenticated: boolean
     authenticated: Boolean(storage.accessToken),
     stats: storage.stats ?? { total: 0, easy: 0, medium: 0, hard: 0 }
   };
-}
-
-function mergeStats(existing: StorageData['stats'] | undefined, submission: SubmissionData): StorageData['stats'] {
-  const next = existing ?? { total: 0, easy: 0, medium: 0, hard: 0 };
-  const difficultyCount = submission.difficulty.toLowerCase() as keyof typeof next;
-  const safeCount = difficultyCount === 'easy' || difficultyCount === 'medium' || difficultyCount === 'hard' ? difficultyCount : 'total';
-  const updated = { ...next, total: next.total + 1 };
-  if (safeCount === 'easy') updated.easy += 1;
-  if (safeCount === 'medium') updated.medium += 1;
-  if (safeCount === 'hard') updated.hard += 1;
-  return updated;
 }
 
 async function updateBadge(text: string): Promise<void> {

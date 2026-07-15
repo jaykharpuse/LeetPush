@@ -17,6 +17,7 @@ const mediumCount = document.getElementById('medium-count') as HTMLElement | nul
 const hardCount = document.getElementById('hard-count') as HTMLElement | null;
 const lastSynced = document.getElementById('last-synced') as HTMLElement | null;
 const signOutButton = document.getElementById('sign-out-button') as HTMLButtonElement | null;
+const retrySyncButton = document.getElementById('retry-sync-button') as HTMLButtonElement | null;
 
 async function loadState(): Promise<void> {
   const response = await chrome.runtime.sendMessage({ type: 'GET_POPUP_STATE' });
@@ -43,6 +44,8 @@ function render(state: PopupState): void {
     if (mediumCount) mediumCount.textContent = String(state.stats?.medium ?? 0);
     if (hardCount) hardCount.textContent = String(state.stats?.hard ?? 0);
     if (lastSynced) lastSynced.textContent = state.lastSynced ? `${state.lastSynced.title} • ${new Date(state.lastSynced.timestamp).toLocaleDateString()}` : 'None yet';
+    const pendingSubmission = (state as PopupState & { pendingSubmission?: unknown }).pendingSubmission;
+    retrySyncButton?.classList.toggle('hidden', !pendingSubmission);
   } else {
     readyView.classList.add('hidden');
     authView.classList.remove('hidden');
@@ -104,12 +107,29 @@ saveTokenButton?.addEventListener('click', async () => {
   if (!token) {
     return;
   }
-  await chrome.storage.local.set({ manualAccessToken: token, accessToken: token, pendingAuth: undefined });
-  await loadState();
+  saveTokenButton.disabled = true;
+  const response = await chrome.runtime.sendMessage({ type: 'SAVE_MANUAL_TOKEN', payload: token });
+  if (!response?.success && deviceCodeBox) {
+    deviceCodeBox.classList.remove('hidden');
+    deviceCodeBox.textContent = response?.error ?? 'GitHub token validation failed.';
+  }
+  saveTokenButton.disabled = false;
+  if (response?.success) await loadState();
 });
 
 signOutButton?.addEventListener('click', async () => {
   await chrome.runtime.sendMessage({ type: 'SIGN_OUT' });
+  await loadState();
+});
+
+retrySyncButton?.addEventListener('click', async () => {
+  retrySyncButton.disabled = true;
+  const response = await chrome.runtime.sendMessage({ type: 'RETRY_PENDING_SYNC' });
+  if (!response?.success && deviceCodeBox) {
+    deviceCodeBox.classList.remove('hidden');
+    deviceCodeBox.textContent = response?.error ?? 'Retry failed.';
+  }
+  retrySyncButton.disabled = false;
   await loadState();
 });
 

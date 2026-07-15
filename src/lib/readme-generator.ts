@@ -58,7 +58,13 @@ export function buildCommitMessage(template: string, submission: SubmissionData)
     difficulty: submission.difficulty,
     titleSlug: submission.titleSlug,
     questionId: submission.questionId,
-    questionTitle: escapeMarkdown(submission.questionTitle)
+    questionTitle: escapeMarkdown(submission.questionTitle),
+    date: new Date(submission.timestamp).toISOString().slice(0, 10),
+    language: submission.lang,
+    time: String(submission.runtimePercentile),
+    space: String(submission.memoryPercentile),
+    problemId: submission.questionId,
+    problemName: escapeMarkdown(submission.questionTitle)
   };
 
   const defaultTemplate = 'Time: {runtime} ms ({runtimePercentile}%), Space: {memory} MB ({memoryPercentile}%) - LeetSync';

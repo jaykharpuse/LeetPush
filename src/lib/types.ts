@@ -40,6 +40,26 @@ export interface SyncStats {
   easy: number;
   medium: number;
   hard: number;
+  languages?: Record<string, number>;
+}
+
+export interface SolvedProblem {
+  questionId: string;
+  title: string;
+  titleSlug: string;
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  language: string;
+  solvedAt: string;
+  folderPath: string;
+  topicTags: string[];
+}
+
+export interface SyncResult {
+  repo: RepoConfig;
+  status: 'created' | 'updated' | 'skipped';
+  reason?: string;
+  commitSha?: string;
+  stats: SyncStats;
 }
 
 export interface LastSyncedInfo {
@@ -58,6 +78,7 @@ export interface StorageData {
   pendingAuth?: DeviceFlowState;
   githubClientId?: string;
   manualAccessToken?: string;
+  pendingSubmission?: SubmissionData;
 }
 
 export interface DeviceFlowState {
